@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SportsCast Web Controller</title>
+    
+    <!-- Tailwind CSS (via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (via CDN) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel (Compiles JSX in the browser) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-[#1a1d24]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        // Simple inline SVGs to replace the Lucide icons library
+        const IconCopy = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>;
+        const IconExternal = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>;
+        const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
+
+        function WebDashboard() {
+            // Generate a random 6 character code on load
+            const [gameCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase());
+            const [workerUrl, setWorkerUrl] = useState("wss://your-cloudflare-worker-url.workers.dev");
+            const [connectionStatus, setConnectionStatus] = useState("Disconnected");
+            const ws = useRef(null);
+
+            // The Master State
+            const [state, setState] = useState({
+                homeName: 'HOME',
+                awayName: 'AWAY',
+                homeScore: 0,
+                awayScore: 0,
+                inning: 1,
+                isTopInning: true,
+                balls: 0,
+                strikes: 0,
+                outs: 0,
+                firstBase: false,
+                secondBase: false,
+                thirdBase: false,
+                sportType: 'baseball' // Always sending baseball layout keys
+            });
+
+            // Connect to Cloudflare WebSocket
+            useEffect(() => {
+                if (!workerUrl.includes("your-cloudflare-worker")) {
+                    setConnectionStatus("Connecting...");
+                    ws.current = new WebSocket(`${workerUrl}/${gameCode}`);
+                    
+                    ws.current.onopen = () => setConnectionStatus("Connected");
+                    ws.current.onclose = () => setConnectionStatus("Disconnected");
+                    ws.current.onerror = () => setConnectionStatus("Error");
+                    
+                    return () => {
+                        if (ws.current) ws.current.close();
+                    };
+                }
+            }, [workerUrl, gameCode]);
+
+            // Broadcast state changes whenever state updates
+            useEffect(() => {
+                if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+                    const payload = {
+                        home: state.homeScore,
+                        away: state.awayScore,
+                        b1: state.firstBase,
+                        b2: state.secondBase,
+                        b3: state.thirdBase,
+                        balls: state.balls,
+                        strikes: state.strikes,
+                        outs: state.outs,
+                        inning: state.inning,
+                        top: state.isTopInning,
+                        homeName: state.homeName,
+                        awayName: state.awayName
+                    };
+                    ws.current.send(JSON.stringify(payload));
+                }
+            }, [state]);
+
+            // Helper updaters
+            const update = (key, value) => setState(prev => ({ ...prev, [key]: value }));
+            const increment = (key, max = null) => setState(prev => {
+                let val = prev[key] + 1;
+                if (max !== null && val > max) val = 0;
+                return { ...prev, [key]: val };
+            });
+            const decrement = (key) => setState(prev => ({ ...prev, [key]: Math.max(0, prev[key] - 1) }));
+            const toggleBase = (baseKey) => setState(prev => ({ ...prev, [baseKey]: !prev[baseKey] }));
+
+            const copyCode = () => {
+                navigator.clipboard.writeText(gameCode);
+                alert(`Game Code ${gameCode} copied to clipboard!`);
+            };
+
+            return (
+                <div className="min-h-screen bg-[#1a1d24] text-gray-200 font-sans selection:bg-blue-500/30 pb-20">
+                    
+                    {/* HEADER */}
+                    <header className="bg-[#22262f] border-b border-[#323844] p-4 flex justify-between items-center sticky top-0 z-50">
+                        <div className="flex items-center space-x-4">
+                            <h1 className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></h1>
+                            <div className="flex items-center bg-[#15171d] rounded-md border border-[#323844] px-3 py-1.5">
+                                <span className="text-xs text-gray-400 mr-2 uppercase tracking-widest font-semibold">Game Code</span>
+                                <span className="text-lg font-mono font-bold text-yellow-400 tracking-widest">{gameCode}</span>
+                                <button onClick={copyCode} className="ml-3 text-gray-400 hover:text-white transition" title="Copy Code">
+                                    <IconCopy />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            <div className="flex items-center space-x-2 text-sm font-semibold">
+                                <div className={`w-2 h-2 rounded-full ${connectionStatus === 'Connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                                <span className={connectionStatus === 'Connected' ? 'text-green-400' : 'text-red-400'}>{connectionStatus}</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <div className="max-w-7xl mx-auto p-6 space-y-6">
+                        
+                        {/* SECTION 1: SCOREBOARD PREVIEW */}
+                        <section className="bg-[#22262f] border border-[#323844] rounded-lg overflow-hidden shadow-2xl">
+                            <div className="bg-[#1a1d24] px-4 py-2 border-b border-[#323844] flex items-center justify-between">
+                                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider flex items-center">
+                                    <span className="mr-2"><IconExternal /></span> Scoreboard Preview
+                                </h2>
+                                <span className="text-xs text-green-400 font-mono animate-pulse">● BROADCASTING</span>
+                            </div>
+                            
+                            <div className="p-8 bg-[#2a2e39] flex justify-center items-center overflow-x-auto relative" style={{backgroundImage: "radial-gradient(#3f434e 1px, transparent 1px)", backgroundSize: "20px 20px"}}>
+                                {/* Baseball Graphic Preview */}
+                                <div className="flex items-stretch h-14 shadow-2xl rounded-sm overflow-hidden text-white font-bold text-2xl font-sans shrink-0 border border-[#3f434e]">
+                                    <div className="bg-[#1a1a1a] opacity-90 px-6 flex items-center">{state.awayName}</div>
+                                    <div className="bg-red-600 px-6 flex items-center text-3xl font-black">{state.awayScore}</div>
+                                    <div className="bg-[#1a1a1a] opacity-90 px-6 flex items-center">{state.homeName}</div>
+                                    <div className="bg-blue-600 px-6 flex items-center text-3xl font-black">{state.homeScore}</div>
+                                    
+                                    <div className="bg-black px-5 flex items-center text-yellow-400">
+                                        {state.isTopInning ? '▲' : '▼'} {state.inning}
+                                    </div>
+                                    
+                                    <div className="bg-[#222] opacity-95 px-5 flex items-center text-xl tracking-wider">
+                                        B:{state.balls} S:{state.strikes} O:{state.outs}
+                                    </div>
+                                    
+                                    <div className="bg-[#222] opacity-95 px-5 flex items-center space-x-1.5 text-yellow-400 text-xl tracking-widest">
+                                        <span>{state.thirdBase ? '◆' : '◇'}</span>
+                                        <span>{state.secondBase ? '◆' : '◇'}</span>
+                                        <span>{state.firstBase ? '◆' : '◇'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 2: CONTROLS */}
+                        <section>
+                            <div className="flex justify-between items-end mb-3">
+                                <h2 className="text-lg font-bold text-white">Controls</h2>
+                                <span className="text-xs text-gray-500">Room: {gameCode}</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                
+                                {/* Away Team */}
+                                <ControlPanel title={state.awayName}>
+                                    <div className="flex justify-center mb-2"><span className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded text-white">Runs: {state.awayScore}</span></div>
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                        <ControlButton onClick={() => increment('awayScore')} label="+1" />
+                                        <ControlButton onClick={() => decrement('awayScore')} label="-1" />
+                                    </div>
+                                    <ControlButton onClick={() => update('awayScore', 0)} label="Reset" variant="outline" />
+                                </ControlPanel>
+
+                                {/* Home Team */}
+                                <ControlPanel title={state.homeName}>
+                                    <div className="flex justify-center mb-2"><span className="bg-blue-600 text-xs font-bold px-2 py-0.5 rounded text-white">Runs: {state.homeScore}</span></div>
+                                    <div className="grid grid-cols-2 gap-2 mb-2">
+                                        <ControlButton onClick={() => increment('homeScore')} label="+1" />
+                                        <ControlButton onClick={() => decrement('homeScore')} label="-1" />
+                                    </div>
+                                    <ControlButton onClick={() => update('homeScore', 0)} label="Reset" variant="outline" />
+                                </ControlPanel>
+
+                                {/* Bases */}
+                                <ControlPanel title="Runners on base">
+                                    <div className="grid grid-cols-3 gap-2 mb-2 h-full items-center">
+                                        <BaseToggle active={state.thirdBase} onClick={() => toggleBase('thirdBase')} label="3B" />
+                                        <BaseToggle active={state.secondBase} onClick={() => toggleBase('secondBase')} label="2B" />
+                                        <BaseToggle active={state.firstBase} onClick={() => toggleBase('firstBase')} label="1B" />
+                                    </div>
+                                    <ControlButton onClick={() => { update('firstBase', false); update('secondBase', false); update('thirdBase', false); }} label="Clear Bases" variant="outline" />
+                                </ControlPanel>
+
+                                {/* Count */}
+                                <ControlPanel title={`B: ${state.balls} • S: ${state.strikes} • O: ${state.outs}`}>
+                                    <div className="space-y-2">
+                                        <CountRow label="Balls" onPlus={() => increment('balls', 4)} onMinus={() => decrement('balls')} />
+                                        <CountRow label="Strikes" onPlus={() => increment('strikes', 3)} onMinus={() => decrement('strikes')} />
+                                        <CountRow label="Outs" onPlus={() => increment('outs', 3)} onMinus={() => decrement('outs')} />
+                                    </div>
+                                    <div className="mt-3">
+                                        <ControlButton onClick={() => { update('balls', 0); update('strikes', 0); }} label="Reset balls and strikes" variant="outline" />
+                                    </div>
+                                </ControlPanel>
+
+                                {/* Inning */}
+                                <div className="lg:col-span-2">
+                                    <ControlPanel title="Game Inning">
+                                        <div className="flex justify-center mb-2"><span className="bg-purple-600 text-xs font-bold px-2 py-0.5 rounded text-white">Inning: {state.inning}</span></div>
+                                        <div className="grid grid-cols-3 gap-2 mb-2">
+                                            <ControlButton onClick={() => increment('inning')} label="+1 Inning" />
+                                            <ControlButton onClick={() => decrement('inning')} label="-1 Inning" />
+                                            <ControlButton onClick={() => update('isTopInning', !state.isTopInning)} label={state.isTopInning ? "Go to Bottom" : "Go to Top"} />
+                                        </div>
+                                    </ControlPanel>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 3: SETUP */}
+                        <section>
+                            <div className="flex justify-between items-end mb-3 mt-6">
+                                <h2 className="text-lg font-bold text-white flex items-center"><span className="mr-2"><IconSettings /></span> Setup</h2>
+                            </div>
+                            
+                            <div className="bg-[#22262f] border border-[#323844] rounded-lg p-6 space-y-6">
+                                {/* Network Setup */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Cloudflare Worker Setup</h3>
+                                    <input 
+                                        type="text" 
+                                        value={workerUrl} 
+                                        onChange={(e) => setWorkerUrl(e.target.value)}
+                                        className="w-full bg-[#15171d] border border-[#323844] rounded p-2.5 text-white focus:outline-none focus:border-blue-500 transition font-mono text-sm"
+                                        placeholder="wss://your-cloudflare-worker-url.workers.dev"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">Make sure you deploy the updated Cloudflare Worker to handle room codes!</p>
+                                </div>
+
+                                <hr className="border-[#323844]"/>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Home Team</h3>
+                                        <input type="text" value={state.homeName} onChange={(e) => update('homeName', e.target.value)} className="w-full bg-[#15171d] border border-[#323844] rounded p-2.5 text-white focus:outline-none focus:border-blue-500 transition"/>
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-400 mb-3 uppercase tracking-wider">Away Team</h3>
+                                        <input type="text" value={state.awayName} onChange={(e) => update('awayName', e.target.value)} className="w-full bg-[#15171d] border border-[#323844] rounded p-2.5 text-white focus:outline-none focus:border-blue-500 transition"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                    </div>
+                </div>
+            );
+        }
+
+        // Sub-Components
+        function ControlPanel({ title, children }) {
+            return (
+                <div className="bg-[#2a2e39] border border-[#3f434e] rounded-lg overflow-hidden flex flex-col h-full">
+                    <div className="bg-[#323743] px-3 py-2 border-b border-[#3f434e]">
+                        <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider truncate">{title}</h3>
+                    </div>
+                    <div className="p-3 flex-1 flex flex-col justify-center">
+                        {children}
+                    </div>
+                </div>
+            );
+        }
+
+        function ControlButton({ onClick, label, variant = 'solid' }) {
+            const baseStyle = "w-full py-3 px-3 rounded text-sm font-bold transition active:scale-95 flex justify-center items-center";
+            const variants = {
+                solid: "bg-[#e5e7eb] hover:bg-white text-[#1a1d24] shadow-sm",
+                outline: "bg-transparent border border-[#4a4f5c] hover:bg-[#3f434e] text-gray-300"
+            };
+            return <button onClick={onClick} className={`${baseStyle} ${variants[variant]}`}>{label}</button>;
+        }
+
+        function BaseToggle({ active, onClick, label }) {
+            return (
+                <button onClick={onClick} className={`w-full py-4 rounded text-sm font-bold transition active:scale-95 flex justify-center items-center ${active ? 'bg-[#22c55e] text-white shadow-[inset_0_0_10px_rgba(0,0,0,0.2)]' : 'bg-[#e5e7eb] hover:bg-white text-[#1a1d24]'}`}>
+                    {label}
+                </button>
+            );
+        }
+
+        function CountRow({ label, onPlus, onMinus }) {
+            return (
+                <div className="flex items-center justify-between text-sm">
+                    <span className="w-16 text-gray-400 font-semibold">{label}</span>
+                    <div className="flex space-x-1 flex-1">
+                        <button onClick={onPlus} className="flex-1 bg-[#e5e7eb] hover:bg-white text-[#1a1d24] py-1.5 rounded font-bold transition active:scale-95">+1</button>
+                        <button onClick={onMinus} className="flex-1 bg-[#e5e7eb] hover:bg-white text-[#1a1d24] py-1.5 rounded font-bold transition active:scale-95">-1</button>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<WebDashboard />);
+    </script>
+</body>
+</html>
