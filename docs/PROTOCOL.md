@@ -37,9 +37,16 @@ Every change sends the full game state:
 
 - `home` / `away` are the points in the current set (volleyball) or the runs/score (other sports).
 - `sport` is shared, so every device shows the same sport.
-- `rev` goes up by 1 on every change. A device only accepts a state whose `rev` is higher
-  than its own (ties are broken by comparing `from` as strings). This stops a late message
-  from undoing a newer score.
+- `kind` is `"change"` when someone pressed a button, and `"sync"` when a device is only
+  sharing its current state (on connect, answering hello, keep-alive). Missing means `"sync"`.
+- `rev` goes up by 1 on every change. Each device counts on its own, so counters can differ.
+  - A `"change"` is always accepted, unless its `rev` is not higher than the last `rev` seen
+    from that same `from` (a late copy).
+  - A `"sync"` is only accepted when its `rev` is higher than our own (ties are broken by
+    comparing `from` as strings). This stops a device with an old saved score from
+    overwriting the room when it connects.
+  - After accepting, a device keeps `rev = max(own rev, incoming rev)`, so its next change
+    is newer for everyone.
 - Missing fields keep their current value. They never reset to 0.
 - A new sport adds its own sub-object (like `volleyball`) and does not change the others.
 

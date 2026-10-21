@@ -206,6 +206,8 @@
             const ws = useRef(null);
             const stateRef = useRef(state);
             const undoStack = useRef([]);
+            // Highest rev seen from each device, so an old "change" from the same device is ignored.
+            const lastRevFrom = useRef({});
 
             const setState = useCallback((next) => {
                 stateRef.current = next;
@@ -219,8 +221,10 @@
                 }
             }, []);
 
-            const sendState = useCallback((s) => {
-                if (s.rev > 0) send(withLegacyFields(s));
+            // kind "change" = someone pressed a button; "sync" = sharing the current state
+            // (on connect, answering hello, keep-alive).
+            const sendState = useCallback((s, kind = 'sync') => {
+                if (s.rev > 0) send({ ...withLegacyFields(s), kind });
             }, [send]);
 
             // Every local change goes through here: copy, change, bump rev, send.
@@ -233,7 +237,7 @@
                 undoStack.current = [...undoStack.current, prev].slice(-MAX_UNDO);
                 setUndoCount(undoStack.current.length);
                 setState(draft);
-                sendState(draft);
+                sendState(draft, 'change');
             }, [setState, sendState]);
 
             const undo = () => {
@@ -243,7 +247,7 @@
                 const current = stateRef.current;
                 const restored = { ...structuredClone(prev), rev: current.rev + 1, from: clientId };
                 setState(restored);
-                sendState(restored);
+                sendState(restored, 'change');
             };
 
             const handleMessage = useCallback((text) => {
@@ -258,13 +262,24 @@
                 }
                 if (msg.v >= 2) {
                     if (msg.from === clientId) return;
-                    if (isNewer(msg, current)) {
-                        // Undo restores a whole snapshot, so after another device
-                        // changes the score it would erase that change. Start over.
-                        undoStack.current = [];
-                        setUndoCount(0);
-                        setState(mergeState(current, msg));
+                    // A button press on another device always wins, even if that device's
+                    // rev counter is behind ours (each device counts on its own). Only a
+                    // late copy of an older press from the same device is ignored.
+                    // Sync messages are only taken when they are newer than what we have.
+                    if (msg.kind === 'change') {
+                        if (msg.rev <= (lastRevFrom.current[msg.from] ?? -1)) return;
+                    } else if (!isNewer(msg, current)) {
+                        return;
                     }
+                    lastRevFrom.current[msg.from] = msg.rev;
+                    const merged = mergeState(current, msg);
+                    // Never go backwards, so our next change is newer for everyone.
+                    merged.rev = Math.max(current.rev, msg.rev);
+                    // Undo restores a whole snapshot, so after another device
+                    // changes the score it would erase that change. Start over.
+                    undoStack.current = [];
+                    setUndoCount(0);
+                    setState(merged);
                     return;
                 }
                 if (typeof msg.home === 'number' || typeof msg.away === 'number') {
