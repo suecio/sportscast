@@ -374,7 +374,7 @@ export default function WebDashboard() {
         <div className="min-h-screen text-gray-200 font-sans pb-20">
             <header className="bg-[#22262f] border-b border-[#323844] p-4 flex flex-wrap gap-3 justify-between items-center sticky top-0 z-50">
                 <div className="flex flex-wrap items-center gap-3">
-                    <h1 className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></h1>
+                    <h1 className="text-xl font-bold text-white tracking-tight"><Link to="/">SportsCast<span className="text-blue-500">Web</span></Link></h1>
                     <div className="flex items-center bg-[#15171d] rounded-md border border-[#323844] px-3 py-1.5">
                         <span className="text-xs text-gray-400 mr-2 uppercase">Game Code</span>
                         <span className="text-lg font-mono font-bold text-yellow-400 tracking-widest">{gameCode}</span>

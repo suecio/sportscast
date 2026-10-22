@@ -8,6 +8,15 @@ import { navigate } from '../router.jsx';
 import { Button, Card, Field, Message, Page } from '../ui.jsx';
 
 export default function Login() {
+    return (
+        <Page>
+            <LoginForm />
+        </Page>
+    );
+}
+
+// The login card, also shown on the front page.
+export function LoginForm() {
     const { t, lang, errorText } = useI18n();
     const { refresh } = useAuth();
     const [email, setEmail] = useState('');
@@ -40,39 +49,35 @@ export default function Login() {
 
     if (sentTo) {
         return (
-            <Page>
-                <Card title={t('login.sent.title')}>
-                    <p className="text-gray-300">{t('login.sent.body', { email: sentTo })}</p>
-                    <Button variant="outline" onClick={() => { setSentTo(null); setPassword(''); }}>{t('login.sent.again')}</Button>
-                </Card>
-            </Page>
+            <Card title={t('login.sent.title')}>
+                <p className="text-gray-300">{t('login.sent.body', { email: sentTo })}</p>
+                <Button variant="outline" onClick={() => { setSentTo(null); setPassword(''); }}>{t('login.sent.again')}</Button>
+            </Card>
         );
     }
 
     return (
-        <Page>
-            <Card title={t('login.title')}>
-                <p className="text-sm text-gray-400">{t('login.intro')}</p>
-                <form onSubmit={logIn} className="space-y-4">
-                    <Field label={t('login.email')} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                    {showPassword && (
-                        <Field label={t('login.password')} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                    )}
-                    <Message>{error}</Message>
-                    {showPassword ? (
-                        <>
-                            <Button type="submit" disabled={busy}>{t('login.withPassword')}</Button>
-                            <Button type="button" variant="outline" disabled={busy || !email} onClick={() => sendLink('login')}>{t('login.sendLink')}</Button>
-                            <Button type="button" variant="link" disabled={busy || !email} onClick={() => sendLink('reset')}>{t('login.forgot')}</Button>
-                        </>
-                    ) : (
-                        <>
-                            <Button type="submit" disabled={busy}>{t('login.sendLink')}</Button>
-                            <Button type="button" variant="outline" onClick={() => setShowPassword(true)}>{t('login.usePassword')}</Button>
-                        </>
-                    )}
-                </form>
-            </Card>
-        </Page>
+        <Card title={t('login.title')}>
+            <p className="text-sm text-gray-400">{t('login.intro')}</p>
+            <form onSubmit={logIn} className="space-y-4">
+                <Field label={t('login.email')} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                {showPassword && (
+                    <Field label={t('login.password')} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+                )}
+                <Message>{error}</Message>
+                {showPassword ? (
+                    <>
+                        <Button type="submit" disabled={busy}>{t('login.withPassword')}</Button>
+                        <Button type="button" variant="outline" disabled={busy || !email} onClick={() => sendLink('login')}>{t('login.sendLink')}</Button>
+                        <Button type="button" variant="link" disabled={busy || !email} onClick={() => sendLink('reset')}>{t('login.forgot')}</Button>
+                    </>
+                ) : (
+                    <>
+                        <Button type="submit" disabled={busy}>{t('login.sendLink')}</Button>
+                        <Button type="button" variant="outline" onClick={() => setShowPassword(true)}>{t('login.usePassword')}</Button>
+                    </>
+                )}
+            </form>
+        </Card>
     );
 }
