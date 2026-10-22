@@ -19,11 +19,11 @@ export function LanguageSelect({ className = '' }) {
     );
 }
 
-export function Page({ children, wide = false }) {
+export function Page({ children, wide = false, full = false }) {
     const { t } = useI18n();
     const { user } = useAuth();
     return (
-        <div className="min-h-screen text-gray-200 font-sans pb-20">
+        <div className={`min-h-screen text-gray-200 font-sans ${full ? '' : 'pb-20'}`}>
             <header className="bg-[#22262f] border-b border-[#323844] p-4 flex flex-wrap gap-3 justify-between items-center">
                 <Link to="/" className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></Link>
                 <nav className="flex items-center gap-4 text-sm font-semibold">
@@ -34,7 +34,9 @@ export function Page({ children, wide = false }) {
                     <LanguageSelect />
                 </nav>
             </header>
-            <main className={`${wide ? 'max-w-3xl' : 'max-w-md'} mx-auto p-4 md:p-6 space-y-6`}>{children}</main>
+            {full
+                ? <main>{children}</main>
+                : <main className={`${wide ? 'max-w-3xl' : 'max-w-md'} mx-auto p-4 md:p-6 space-y-6`}>{children}</main>}
         </div>
     );
 }

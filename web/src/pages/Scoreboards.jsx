@@ -14,7 +14,7 @@ export default function Scoreboards() {
         <Page wide>
             <Card title={t('scoreboards.title')}>
                 <p className="text-gray-300">{t('scoreboards.soon')}</p>
-                <Link to="/" className="block text-center w-full py-2.5 rounded text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white">{t('scoreboards.open')}</Link>
+                <Link to="/score" className="block text-center w-full py-2.5 rounded text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white">{t('scoreboards.open')}</Link>
             </Card>
         </Page>
     );
