@@ -61,7 +61,16 @@ export const defaultState = () => ({
     away: 0,
     volleyball: defaultVolleyball(),
     baseball: defaultBaseball(),
+    screen: '',             // full-screen card on the stream: '', 'starting', 'break' or 'ended'
 });
+
+// The full-screen cards on the stream, also shown on the display page.
+export const SCREENS = [
+    { id: '', label: 'Scoreboard' },
+    { id: 'starting', label: 'Starting soon' },
+    { id: 'break', label: 'Break' },
+    { id: 'ended', label: 'Match over' },
+];
 
 // Missing fields keep the value we already have (never reset to 0).
 export function mergeState(current, incoming) {
@@ -116,6 +125,19 @@ const TIMEOUT_BANNER_SECONDS = 30;
 
 const vb = {
     setNumber: (s) => s.volleyball.setsHome + s.volleyball.setsAway + 1,
+    // 'SET POINT' or 'MATCH POINT' when a team wins the set with its next point.
+    pointLabel: (s) => {
+        const v = s.volleyball;
+        if (v.finished || vb.setWinner(s)) return null;
+        for (const team of ['home', 'away']) {
+            const next = s[team] + 1;
+            const other = s[team === 'home' ? 'away' : 'home'];
+            if (next < vb.target(s) || next - other < 2) continue;
+            const sets = team === 'home' ? v.setsHome : v.setsAway;
+            return { team, text: sets + 1 >= vb.setsToWin(s) ? 'MATCH POINT' : 'SET POINT' };
+        }
+        return null;
+    },
     // Past set scores on the graphic: always, or (when hidden) from the end of a set until
     // the first point of the next one, and once the match is finished.
     showPastSets: (s) => s.volleyball.showSets !== false || s.volleyball.finished
@@ -458,14 +480,22 @@ export default function WebDashboard({ fixedCode }) {
                         {isConnected && <span className="text-xs text-green-400 font-mono animate-pulse">● SYNCED</span>}
                     </div>
                     <div className="p-6 md:p-8 bg-[#2a2e39] flex justify-center items-center overflow-x-auto relative" style={{backgroundImage: "radial-gradient(#3f434e 1px, transparent 1px)", backgroundSize: "20px 20px"}}>
-                        {state.sport === 'volleyball' && <VolleyballPreview state={state} />}
-                        {state.sport === 'baseball' && <BaseballPreview state={state} />}
-                        {state.sport === 'basic' && <BasicPreview state={state} />}
+                        <ScorePreview state={state} />
                     </div>
                 </section>
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 items-center">
                     <button onClick={undo} disabled={undoCount === 0} className="flex-1 md:flex-none md:px-8 py-3 rounded text-sm font-bold border border-[#4a4f5c] text-gray-200 hover:bg-[#3f434e] disabled:opacity-40 transition active:scale-95">Undo</button>
+                    {/* What the stream shows: the scoreboard, or a full-screen card. */}
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">On the stream:</span>
+                        {SCREENS.map(s => (
+                            <button key={s.id} onClick={() => commit(d => { d.screen = s.id; })}
+                                className={`px-3 py-2 rounded text-sm font-bold transition active:scale-95 ${(state.screen || '') === s.id ? 'bg-yellow-400 text-black' : 'border border-[#4a4f5c] text-gray-200 hover:bg-[#3f434e]'}`}>
+                                {s.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {state.sport === 'volleyball' && <VolleyballControls state={state} commit={commit} />}
@@ -534,9 +564,36 @@ function useTimeoutBanner(state) {
     return left > 0 ? state.volleyball.timeoutTeam : null;
 }
 
+// The graphic for the current sport, or the full-screen card ("Starting soon", break, match over).
+export function ScorePreview({ state }) {
+    if (state.screen) return <IntermissionPreview state={state} />;
+    if (state.sport === 'volleyball') return <VolleyballPreview state={state} />;
+    if (state.sport === 'baseball') return <BaseballPreview state={state} />;
+    return <BasicPreview state={state} />;
+}
+
+// Small version of the app's full-screen card, for the display page, embeds and the preview.
+export function IntermissionPreview({ state }) {
+    const title = { starting: 'STARTING SOON', break: 'BREAK' }[state.screen] || 'MATCH OVER';
+    const v = state.volleyball;
+    const score = state.sport === 'volleyball' ? `${v.setsHome} - ${v.setsAway}` : `${state.home} - ${state.away}`;
+    return (
+        <div className="bg-[#101218]/90 text-white font-sans rounded-sm border border-[#3f434e] shadow-2xl px-8 py-4 text-center shrink-0">
+            <div className="text-yellow-400 text-2xl font-black tracking-wide">{title}</div>
+            <div className="text-xl font-extrabold mt-1 whitespace-nowrap">
+                {state.homeName}&nbsp;&nbsp;<span className="text-yellow-400">{score}</span>&nbsp;&nbsp;{state.awayName}
+            </div>
+            {state.sport === 'volleyball' && v.pastSets.length > 0 && (
+                <div className="text-sm text-gray-300 mt-1">{v.pastSets.map(p => `${p[0]}-${p[1]}`).join('   ')}</div>
+            )}
+        </div>
+    );
+}
+
 export function VolleyballPreview({ state }) {
     const v = state.volleyball;
     const banner = useTimeoutBanner(state);
+    const point = banner ? null : vb.pointLabel(state);
     const showPast = vb.showPastSets(state);
     const rows = [
         { team: 'home', name: state.homeName, sets: v.setsHome, points: state.home, timeouts: v.timeoutsHome, color: 'bg-blue-600', past: v.pastSets.map(s => s[0]), other: v.pastSets.map(s => s[1]) },
@@ -566,6 +623,11 @@ export function VolleyballPreview({ state }) {
             {banner && (
                 <div className="bg-yellow-400 text-black h-8 px-3 flex items-center text-lg font-black whitespace-nowrap">
                     TIMEOUT&nbsp;&nbsp;{banner === 'home' ? state.homeName : state.awayName}
+                </div>
+            )}
+            {point && (
+                <div className="bg-white text-black h-8 px-3 flex items-center text-lg font-black whitespace-nowrap">
+                    {point.text}&nbsp;&nbsp;{point.team === 'home' ? state.homeName : state.awayName}
                 </div>
             )}
         </div>

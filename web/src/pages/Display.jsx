@@ -1,9 +1,11 @@
 // The score graphic alone, read-only, on a transparent background: for fans, for OBS
 // (browser source) and for embedding on a club website with an iframe.
+// With ?report in the address it shows the match report instead (printable).
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { useI18n } from '../i18n.jsx';
-import { BaseballPreview, BasicPreview, VolleyballPreview, defaultState, isNewer, legacyToState, mergeState } from '../Controller.jsx';
+import { ScorePreview, defaultState, isNewer, legacyToState, mergeState } from '../Controller.jsx';
+import MatchReport from './MatchReport.jsx';
 
 const clientId = 'display-' + Math.random().toString(36).substring(2, 8);
 
@@ -11,11 +13,14 @@ export default function Display({ code }) {
     const { t, errorText } = useI18n();
     const [state, setState] = useState(defaultState);
     const [error, setError] = useState('');
+    const [title, setTitle] = useState('');
+    const isReport = new URLSearchParams(window.location.search).has('report');
     const stateRef = useRef(state);
     const lastRevFrom = useRef({});
 
     // Transparent page, so only the graphic shows in OBS or an iframe.
     useEffect(() => {
+        if (isReport) return;
         const previous = document.body.className;
         document.body.className = 'bg-transparent';
         return () => { document.body.className = previous; };
@@ -65,7 +70,7 @@ export default function Display({ code }) {
 
         // Check the code first, so a wrong or private code shows a message instead of an empty graphic.
         api(`code/${encodeURIComponent(code)}`)
-            .then(() => { if (!closed) open(); })
+            .then((info) => { if (!closed) { setTitle(info.title || ''); open(); } })
             .catch((err) => setError(errorText(err)));
 
         return () => {
@@ -77,11 +82,11 @@ export default function Display({ code }) {
 
     if (error) return <p className="m-4 inline-block bg-[#22262f] text-gray-200 rounded p-3 text-sm">{error}</p>;
 
+    if (isReport) return <MatchReport state={state} title={title} />;
+
     return (
         <div className="p-2 inline-block" aria-label={t('code.displayTitle')}>
-            {state.sport === 'volleyball' && <VolleyballPreview state={state} />}
-            {state.sport === 'baseball' && <BaseballPreview state={state} />}
-            {state.sport === 'basic' && <BasicPreview state={state} />}
+            <ScorePreview state={state} />
         </div>
     );
 }

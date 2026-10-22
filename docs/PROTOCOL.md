@@ -36,7 +36,8 @@ Every change sends the full game state:
     "timeoutUntil": 0,
     "showSets": true
   },
-  "baseball": { "b1": false, "b2": true, "b3": false, "balls": 1, "strikes": 2, "outs": 1, "inning": 4, "top": true }
+  "baseball": { "b1": false, "b2": true, "b3": false, "balls": 1, "strikes": 2, "outs": 1, "inning": 4, "top": true },
+  "screen": ""
 }
 ```
 
@@ -62,6 +63,15 @@ Worker sends a `"change"` with `"from": "server"` to the room (and stores it as 
 state). It holds the stored state with `sport` and the format fields of `volleyball`
 (`bestOf`, `pointsPerSet`, `decidingSetPoints`, `maxTimeouts`, `showSets`) replaced. Devices handle it
 like any other change.
+
+## Full-screen cards
+
+`screen` is `""` (the normal scoreboard), `"starting"` (Starting soon), `"break"` or `"ended"`
+(Match over). Any device can change it. The app then covers the whole video with a card
+showing the title, the team names and the score; the display page shows a small version.
+
+The graphic also shows SET POINT or MATCH POINT under the volleyball scoreboard when a team
+wins the set with its next point. This is worked out from the score; it is not a field.
 
 ## Showing past sets
 

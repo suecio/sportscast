@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import { useAuth } from '../auth.jsx';
 import { useI18n } from '../i18n.jsx';
 import { Link, navigate } from '../router.jsx';
-import { copyText, displayLink, embedCode, scorerLink } from '../links.js';
+import { copyText, displayLink, embedCode, reportLink, scorerLink } from '../links.js';
 import { Button, Card, Field, Message, Page } from '../ui.jsx';
 import MatchFormat from './MatchFormat.jsx';
 import YouTubeCard from './YouTubeCard.jsx';
@@ -114,6 +114,14 @@ export default function BoardAdmin({ id }) {
                             onNew={() => update({ displayCode: 'new' }, t('board.newCodeDone'))} />
                         <ShareRow label={t('board.embed')} help={t('board.embedHelp')} value={embedCode(board.displayCode)} multiline
                             preview={<EmbedThumb caption={t('board.thumbEmbed')} sport={board.sport} />} />
+                        <ShareRow label={t('board.report')} help={t('board.reportHelp')} value={reportLink(board.displayCode)}
+                            preview={
+                                <a href={reportLink(board.displayCode)} target="_blank" rel="noreferrer" className="block bg-white text-gray-900 rounded p-3 text-xs leading-5 hover:opacity-90">
+                                    <div className="font-black">HOME 2 - 1 AWAY</div>
+                                    <div>1 · 25-21</div><div>2 · 19-25</div><div>3 · 25-23</div>
+                                    <div className="text-gray-500 mt-1">{t('board.thumbReport')}</div>
+                                </a>
+                            } />
                     </>
                 )}
                 <p className="text-sm text-gray-400">{t('board.appHelp', { code: board.scorerCode })}</p>

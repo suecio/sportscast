@@ -93,6 +93,7 @@ export default function YouTubeCard({ board }) {
                             </select>
                         </label>
                     </div>
+                    <p className="text-sm text-yellow-200 bg-yellow-500/10 border border-yellow-500/30 rounded p-3">{t('youtube.minors')}</p>
                     <Button type="submit" disabled={busy}>{busy ? t('common.loading') : t('youtube.create')}</Button>
                 </form>
             )}

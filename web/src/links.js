@@ -16,6 +16,8 @@ export function displayLink(code) {
     return `${window.location.origin}/board/${encodeURIComponent(code)}`;
 }
 
+export const reportLink = (code) => `${displayLink(code)}?report`;
+
 export const embedCode = (code) =>
     `<iframe src="${displayLink(code)}" width="480" height="140" style="border:0;background:transparent" allowtransparency="true" title="SportsCast"></iframe>`;
 
