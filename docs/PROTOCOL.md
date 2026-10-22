@@ -2,7 +2,9 @@
 
 All devices in a room (website, iPad, iPhone) connect to the Cloudflare worker at
 `wss://<worker>/<ROOM>` and exchange JSON text messages. The worker relays each
-message to the other devices in the same room.
+message to the other devices in the same room. The worker code is in `worker/`: each room
+is one Durable Object, and it remembers the latest state (`v` 2) so a device that joins
+gets the score right away, as a `"sync"` message.
 
 ## State message
 
