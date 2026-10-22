@@ -12,6 +12,7 @@ const TEXT = {
     en: {
         'nav.login': 'Log in',
         'nav.account': 'Account',
+        'nav.help': 'Help',
         'nav.scoreboards': 'My scoreboards',
         'nav.controller': 'Scoreboard controller',
 
@@ -236,6 +237,7 @@ const TEXT = {
     sv: {
         'nav.login': 'Logga in',
         'nav.account': 'Konto',
+        'nav.help': 'Hjälp',
         'nav.scoreboards': 'Mina resultattavlor',
         'nav.controller': 'Styr resultattavlan',
 
@@ -460,6 +462,7 @@ const TEXT = {
     es: {
         'nav.login': 'Entrar',
         'nav.account': 'Cuenta',
+        'nav.help': 'Ayuda',
         'nav.scoreboards': 'Mis marcadores',
         'nav.controller': 'Controlar el marcador',
 

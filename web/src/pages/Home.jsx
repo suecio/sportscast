@@ -91,6 +91,7 @@ export default function Home() {
                     <span>© {new Date().getFullYear()} SportsCast</span>
                     <span>{t('home.footer')}</span>
                     <span className="flex gap-4">
+                        <Link to="/help" className="hover:text-gray-300">{t('nav.help')}</Link>
                         <Link to="/privacy" className="hover:text-gray-300">{t('legal.privacy')}</Link>
                         <Link to="/terms" className="hover:text-gray-300">{t('legal.terms')}</Link>
                     </span>
