@@ -33,7 +33,8 @@ Every change sends the full game state:
     "maxTimeouts": 2,
     "finished": false,
     "timeoutTeam": "",
-    "timeoutUntil": 0
+    "timeoutUntil": 0,
+    "showSets": true
   },
   "baseball": { "b1": false, "b2": true, "b3": false, "balls": 1, "strikes": 2, "outs": 1, "inning": 4, "top": true }
 }
@@ -59,8 +60,15 @@ Every change sends the full game state:
 When the owner changes a scoreboard's sport or volleyball match format on its page, the
 Worker sends a `"change"` with `"from": "server"` to the room (and stores it as the latest
 state). It holds the stored state with `sport` and the format fields of `volleyball`
-(`bestOf`, `pointsPerSet`, `decidingSetPoints`, `maxTimeouts`) replaced. Devices handle it
+(`bestOf`, `pointsPerSet`, `decidingSetPoints`, `maxTimeouts`, `showSets`) replaced. Devices handle it
 like any other change.
+
+## Showing past sets
+
+`volleyball.showSets` (default `true`) says whether the graphic shows the scores of earlier
+sets all the time. When it is `false`, they only show between sets (a set has ended and both
+teams still have 0 points in the new one) and when the match is `finished`. It can be changed
+on the scoreboard page (stored with the match format) and in the iPhone app (a normal change).
 
 ## Hello message
 

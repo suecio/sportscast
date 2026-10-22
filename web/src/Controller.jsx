@@ -41,6 +41,7 @@ const defaultVolleyball = () => ({
     finished: false,
     timeoutTeam: '',        // the team in the "TIMEOUT" banner, or '' for none
     timeoutUntil: 0,        // when that banner ends, in milliseconds since 1970
+    showSets: true,         // false: past set scores only show between sets and at the end
 });
 
 const defaultBaseball = () => ({
@@ -115,6 +116,10 @@ const TIMEOUT_BANNER_SECONDS = 30;
 
 const vb = {
     setNumber: (s) => s.volleyball.setsHome + s.volleyball.setsAway + 1,
+    // Past set scores on the graphic: always, or (when hidden) from the end of a set until
+    // the first point of the next one, and once the match is finished.
+    showPastSets: (s) => s.volleyball.showSets !== false || s.volleyball.finished
+        || (s.volleyball.pastSets.length > 0 && s.home === 0 && s.away === 0),
     setsToWin: (s) => Math.ceil(s.volleyball.bestOf / 2),
     isDecidingSet: (s) => vb.setNumber(s) === s.volleyball.bestOf,
     target: (s) => (vb.isDecidingSet(s) ? s.volleyball.decidingSetPoints : s.volleyball.pointsPerSet),
@@ -166,7 +171,7 @@ const vb = {
     resetMatch: (d) => {
         const keep = d.volleyball;
         d.home = 0; d.away = 0;
-        d.volleyball = { ...defaultVolleyball(), bestOf: keep.bestOf, pointsPerSet: keep.pointsPerSet, decidingSetPoints: keep.decidingSetPoints, maxTimeouts: keep.maxTimeouts };
+        d.volleyball = { ...defaultVolleyball(), bestOf: keep.bestOf, pointsPerSet: keep.pointsPerSet, decidingSetPoints: keep.decidingSetPoints, maxTimeouts: keep.maxTimeouts, showSets: keep.showSets };
     },
 };
 
@@ -532,6 +537,7 @@ function useTimeoutBanner(state) {
 export function VolleyballPreview({ state }) {
     const v = state.volleyball;
     const banner = useTimeoutBanner(state);
+    const showPast = vb.showPastSets(state);
     const rows = [
         { team: 'home', name: state.homeName, sets: v.setsHome, points: state.home, timeouts: v.timeoutsHome, color: 'bg-blue-600', past: v.pastSets.map(s => s[0]), other: v.pastSets.map(s => s[1]) },
         { team: 'away', name: state.awayName, sets: v.setsAway, points: state.away, timeouts: v.timeoutsAway, color: 'bg-red-600', past: v.pastSets.map(s => s[1]), other: v.pastSets.map(s => s[0]) },
@@ -550,7 +556,7 @@ export function VolleyballPreview({ state }) {
                             <span key={i} className={`block w-3 h-1 rounded-[1px] ${i < v.maxTimeouts - r.timeouts ? 'bg-white' : 'bg-[#555]'}`}></span>
                         ))}
                     </div>
-                    {r.past.map((p, i) => (
+                    {showPast && r.past.map((p, i) => (
                         <div key={i} className={`bg-[#222] w-11 flex items-center justify-center text-lg ${p > r.other[i] ? 'text-white' : 'text-gray-500'}`}>{p}</div>
                     ))}
                     <div className="bg-black w-11 flex items-center justify-center text-xl text-yellow-400">{r.sets}</div>
