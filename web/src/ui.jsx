@@ -3,7 +3,7 @@ import { LANGUAGES, useI18n } from './i18n.jsx';
 import { useAuth } from './auth.jsx';
 import { Link } from './router.jsx';
 import { api } from './api.js';
-import { siteKind } from './links.js';
+import { mainSiteLink, siteKind } from './links.js';
 
 export function LanguageSelect({ className = '' }) {
     const { lang, setLang } = useI18n();
@@ -41,7 +41,9 @@ export function Page({ children, wide = false, full = false }) {
     return (
         <div className={`min-h-screen text-gray-200 font-sans ${full ? '' : 'pb-20'}`}>
             <header className="bg-[#22262f] border-b border-[#323844] p-4 flex flex-wrap gap-3 justify-between items-center">
-                <Link to="/" className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></Link>
+                {siteKind() === 'main'
+                    ? <Link to="/" className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></Link>
+                    : <a href={mainSiteLink('/')} className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></a>}
                 <AccountNav />
             </header>
             {full

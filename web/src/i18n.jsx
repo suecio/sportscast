@@ -150,6 +150,8 @@ const TEXT = {
         'code.displayIntro': 'Type the scoreboard\'s code to see the live score.',
         'code.label': 'Code',
         'code.open': 'Open',
+        'code.noCode': 'No code?',
+        'code.home': 'Go to sportscast.cc',
 
         'common.loading': 'Loading…',
         'common.passwordsDontMatch': 'The two passwords are not the same.',
@@ -375,6 +377,8 @@ const TEXT = {
         'code.displayIntro': 'Skriv resultattavlans kod för att se resultatet live.',
         'code.label': 'Kod',
         'code.open': 'Öppna',
+        'code.noCode': 'Ingen kod?',
+        'code.home': 'Gå till sportscast.cc',
 
         'common.loading': 'Laddar…',
         'common.passwordsDontMatch': 'Lösenorden är inte likadana.',
@@ -600,6 +604,8 @@ const TEXT = {
         'code.displayIntro': 'Escribe el código del marcador para ver el resultado en vivo.',
         'code.label': 'Código',
         'code.open': 'Abrir',
+        'code.noCode': '¿No tienes código?',
+        'code.home': 'Ir a sportscast.cc',
 
         'common.loading': 'Cargando…',
         'common.passwordsDontMatch': 'Las dos contraseñas no son iguales.',

@@ -29,6 +29,14 @@ export function siteKind() {
     return 'main';
 }
 
+// A page on the main site. On scorer. and scoreboard. that is the parent domain
+// (scorer.sportscast.cc -> sportscast.cc); elsewhere it is this site.
+export function mainSiteLink(path = '/') {
+    if (siteKind() === 'main') return path;
+    const { protocol, hostname, port } = window.location;
+    return `${protocol}//${hostname.split('.').slice(1).join('.')}${port ? `:${port}` : ''}${path}`;
+}
+
 export async function copyText(text) {
     try {
         await navigator.clipboard.writeText(text);
