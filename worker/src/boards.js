@@ -19,7 +19,7 @@ const MAX_TITLE = 80;
 const MAX_BOARDS = 5;
 
 // Volleyball match format. Indoor best of 5 is the default.
-const DEFAULT_FORMAT = { bestOf: 5, pointsPerSet: 25, decidingSetPoints: 15, maxTimeouts: 2 };
+const DEFAULT_FORMAT = { bestOf: 5, pointsPerSet: 25, decidingSetPoints: 15, maxTimeouts: 2, showSets: true };
 const FORMAT_LIMITS = {
   bestOf: [1, 7],
   pointsPerSet: [5, 99],
@@ -37,6 +37,8 @@ function cleanFormat(value) {
   }
   // "Best of" needs an odd number, so one team always wins.
   if (format.bestOf % 2 === 0) throw new ApiError(400, "bad_format");
+  // Show the past set scores on the graphic all the time (true), or only between sets (false).
+  format.showSets = value.showSets !== false;
   return format;
 }
 

@@ -23,7 +23,7 @@ export default function MatchFormat({ format, busy, onSave }) {
 
     const pick = (id) => {
         setTemplate(id);
-        if (FORMAT_TEMPLATES[id]) setForm(FORMAT_TEMPLATES[id]);
+        if (FORMAT_TEMPLATES[id]) setForm({ ...form, ...FORMAT_TEMPLATES[id] });
     };
     const setNumber = (field) => (e) => {
         const next = { ...form, [field]: Number(e.target.value) };
@@ -63,6 +63,13 @@ export default function MatchFormat({ format, busy, onSave }) {
                     {number('decidingSetPoints', 5, 99)}
                     {number('maxTimeouts', 0, 5)}
                 </div>
+                <label className="flex items-start gap-3">
+                    <input type="checkbox" checked={form.showSets !== false} onChange={(e) => setForm({ ...form, showSets: e.target.checked })} className="mt-1 h-4 w-4" />
+                    <span>
+                        <span className="block text-sm font-semibold text-gray-200">{t('format.showSets')}</span>
+                        <span className="block text-sm text-gray-400">{t('format.showSetsHelp')}</span>
+                    </span>
+                </label>
                 <Button type="submit" disabled={busy}>{t('format.save')}</Button>
             </form>
         </Card>
