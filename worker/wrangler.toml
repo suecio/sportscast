@@ -1,0 +1,15 @@
+# Cloudflare Worker that relays score messages between the devices in a room.
+# Deploy from this folder with: npx wrangler deploy
+name = "sportscast-server"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+
+# One Durable Object per room, so every device in a room talks to the same object,
+# wherever in the world Cloudflare runs the request.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
