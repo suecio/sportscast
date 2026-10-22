@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { useI18n } from '../i18n.jsx';
 import { navigate } from '../router.jsx';
-import { siteKind } from '../links.js';
+import { mainSiteLink, siteKind } from '../links.js';
 import { Button, Card, Field, Message, Page } from '../ui.jsx';
 
 export default function CodeEntry({ kind }) {
@@ -40,6 +40,12 @@ export default function CodeEntry({ kind }) {
                     <Button type="submit" disabled={busy}>{t('code.open')}</Button>
                 </form>
             </Card>
+            <p className="text-sm text-gray-400 text-center">
+                {t('code.noCode')}{' '}
+                <a href={mainSiteLink('/')} className="text-blue-400 hover:text-blue-300 underline">{t('code.home')}</a>
+                {' · '}
+                <a href={mainSiteLink('/scoreboards')} className="text-blue-400 hover:text-blue-300 underline">{t('nav.scoreboards')}</a>
+            </p>
         </Page>
     );
 }
