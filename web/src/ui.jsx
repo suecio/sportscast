@@ -28,6 +28,7 @@ export function AccountNav() {
     if (siteKind() !== 'main') return <LanguageSelect />;
     return (
         <nav className="flex items-center gap-4 text-sm font-semibold">
+            <Link to="/help" className="text-gray-300 hover:text-white">{t('nav.help')}</Link>
             {user && <Link to="/scoreboards" className="text-gray-300 hover:text-white">{t('nav.scoreboards')}</Link>}
             {user && <Link to="/account" className="text-gray-300 hover:text-white">{t('nav.account')}</Link>}
             {user === null && <Link to="/login" className="text-gray-300 hover:text-white">{t('nav.login')}</Link>}

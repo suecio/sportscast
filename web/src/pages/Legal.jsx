@@ -32,6 +32,9 @@ export function Privacy() {
             </ul>
             <p>We do not use advertising, tracking or analytics cookies, and we do not sell or rent your data.</p>
 
+            <h2>The iPhone app</h2>
+            <p>The app uses the camera and microphone only to send the match video to the stream address you enter, such as YouTube. The video does not pass through SportsCast. If you turn on the backup recording, the video is saved in Photos on your iPhone and nowhere else. The app keeps its settings, including the stream key, on your iPhone. It sends the score and team names to sportscast.cc so the website and other devices stay in sync. The app has no ads and no tracking.</p>
+
             <h2>YouTube and Google</h2>
             <p>SportsCast uses YouTube API Services. When you press "Connect YouTube", Google asks you to allow SportsCast to manage your YouTube account. We use this access only to:</p>
             <ul>
