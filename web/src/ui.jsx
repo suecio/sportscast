@@ -3,6 +3,7 @@ import { LANGUAGES, useI18n } from './i18n.jsx';
 import { useAuth } from './auth.jsx';
 import { Link } from './router.jsx';
 import { api } from './api.js';
+import { siteKind } from './links.js';
 
 export function LanguageSelect({ className = '' }) {
     const { lang, setLang } = useI18n();
@@ -19,20 +20,28 @@ export function LanguageSelect({ className = '' }) {
     );
 }
 
-export function Page({ children, wide = false, full = false }) {
+// Links for the logged-in user (or Log in), and the language. Shown on every page.
+export function AccountNav() {
     const { t } = useI18n();
     const { user } = useAuth();
+    // The scorer. and scoreboard. sites have no accounts: only the language there.
+    if (siteKind() !== 'main') return <LanguageSelect />;
+    return (
+        <nav className="flex items-center gap-4 text-sm font-semibold">
+            {user && <Link to="/scoreboards" className="text-gray-300 hover:text-white">{t('nav.scoreboards')}</Link>}
+            {user && <Link to="/account" className="text-gray-300 hover:text-white">{t('nav.account')}</Link>}
+            {user === null && <Link to="/login" className="text-gray-300 hover:text-white">{t('nav.login')}</Link>}
+            <LanguageSelect />
+        </nav>
+    );
+}
+
+export function Page({ children, wide = false, full = false }) {
     return (
         <div className={`min-h-screen text-gray-200 font-sans ${full ? '' : 'pb-20'}`}>
             <header className="bg-[#22262f] border-b border-[#323844] p-4 flex flex-wrap gap-3 justify-between items-center">
                 <Link to="/" className="text-xl font-bold text-white tracking-tight">SportsCast<span className="text-blue-500">Web</span></Link>
-                <nav className="flex items-center gap-4 text-sm font-semibold">
-                    {user && <Link to="/scoreboards" className="text-gray-300 hover:text-white">{t('nav.scoreboards')}</Link>}
-                    {user
-                        ? <Link to="/account" className="text-gray-300 hover:text-white">{t('nav.account')}</Link>
-                        : <Link to="/login" className="text-gray-300 hover:text-white">{t('nav.login')}</Link>}
-                    <LanguageSelect />
-                </nav>
+                <AccountNav />
             </header>
             {full
                 ? <main>{children}</main>

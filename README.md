@@ -7,14 +7,18 @@ score into the video; this repo is the website and the Cloudflare Worker.
 
 | Folder | What |
 |---|---|
-| `web/` | The website (Vite + React + Tailwind): scoreboard controller, login, account settings |
-| `worker/src/` | The Worker: `/api` for accounts (`auth.js`), live score rooms (`room.js`, one Durable Object per room) |
+| `web/` | The website (Vite + React + Tailwind): front page, login, account, My scoreboards, scoreboard admin, scorer (controller) and display pages |
+| `worker/src/` | The Worker: `/api` for accounts (`auth.js`) and scoreboards (`boards.js`), live score rooms (`room.js`, one Durable Object per room) |
 | `wrangler.toml` | Worker settings: website files, rooms, D1 database |
 | `docs/PROTOCOL.md` | The live score messages between website and app |
 | `index.html` | The old one-file website, still served by Cloudflare Pages at sportscast-5iv.pages.dev. Delete once sportscast.cc is in use |
 
-One Worker serves everything at sportscast.cc: the website, `/api/*`, and websocket
-rooms at `/<ROOM>` (the app keeps using `wss://sportscast-server.suecio.workers.dev/<ROOM>`).
+One Worker serves everything at sportscast.cc, scorer.sportscast.cc and
+scoreboard.sportscast.cc: the website, `/api/*`, and websocket rooms at `/<CODE>`.
+A scoreboard's scorer code opens its room with write access, its display code
+read-only (refused while the scoreboard is private). Any other code is an open room
+without an account, so the current app (`wss://sportscast-server.suecio.workers.dev/<CODE>`)
+works with both.
 
 ## Deploy
 
