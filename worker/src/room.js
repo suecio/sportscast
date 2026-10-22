@@ -24,6 +24,28 @@ export class Room extends DurableObject {
       return new Response("ok");
     }
 
+    // Called by the Worker when the owner changes the sport or match format on the
+    // scoreboard page: merged into the score and sent to every device as a change.
+    if (request.method === "POST" && new URL(request.url).pathname === "/settings") {
+      const changes = await request.json();
+      const stored = await this.ctx.storage.get("latest");
+      const base = stored ? JSON.parse(stored) : { v: 2, rev: 0 };
+      const next = {
+        ...base,
+        ...(changes.sport ? { sport: changes.sport } : {}),
+        volleyball: { ...(base.volleyball || {}), ...(changes.volleyball || {}) },
+        v: 2,
+        rev: (base.rev ?? 0) + 1,
+        from: "server",
+      };
+      const text = JSON.stringify({ ...next, kind: "change" });
+      for (const socket of this.ctx.getWebSockets()) {
+        try { socket.send(text); } catch {}
+      }
+      await this.ctx.storage.put("latest", JSON.stringify({ ...next, kind: "sync" }));
+      return new Response("ok");
+    }
+
     const [client, server] = Object.values(new WebSocketPair());
     // Hibernation API: the object can sleep between messages without dropping sockets.
     // The tag remembers whether this device may change the score (set by the Worker).

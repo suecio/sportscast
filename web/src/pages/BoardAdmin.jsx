@@ -6,6 +6,7 @@ import { useI18n } from '../i18n.jsx';
 import { Link, navigate } from '../router.jsx';
 import { copyText, displayLink, embedCode, scorerLink } from '../links.js';
 import { Button, Card, Field, Message, Page } from '../ui.jsx';
+import MatchFormat from './MatchFormat.jsx';
 import { SportSelect } from './Scoreboards.jsx';
 import { DisplayThumb, EmbedThumb, ScorerThumb } from './SharePreviews.jsx';
 
@@ -80,6 +81,11 @@ export default function BoardAdmin({ id }) {
                     <Button type="submit" disabled={busy}>{t('board.save')}</Button>
                 </form>
             </Card>
+
+            {board.sport === 'volleyball' && (
+                <MatchFormat key={JSON.stringify(board.format)} format={board.format} busy={busy}
+                    onSave={(format) => update({ format }, t('format.saved'))} />
+            )}
 
             <Card title={t('board.privacy')}>
                 <label className="flex items-start gap-3 cursor-pointer">

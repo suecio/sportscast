@@ -50,11 +50,30 @@ const SCHEMA = [
   `CREATE INDEX IF NOT EXISTS scoreboards_owner ON scoreboards(owner_id, created_at)`,
 ];
 
+// Columns added after a table was first created. SQLite has no "ADD COLUMN IF NOT EXISTS".
+const ADDED_COLUMNS = [
+  // Volleyball match format as JSON: bestOf, pointsPerSet, decidingSetPoints, maxTimeouts.
+  ["scoreboards", "format", "TEXT"],
+];
+
+async function addColumns(db) {
+  for (const [table, column, type] of ADDED_COLUMNS) {
+    const { results } = await db.prepare(`PRAGMA table_info(${table})`).all();
+    if (results.some((c) => c.name === column)) continue;
+    try {
+      await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+    } catch (err) {
+      // Another copy of the Worker added it at the same moment.
+      if (!String(err).includes("duplicate column")) throw err;
+    }
+  }
+}
+
 let ready = null;
 
 export function ensureSchema(db) {
   if (!ready) {
-    ready = db.batch(SCHEMA.map((sql) => db.prepare(sql))).catch((err) => {
+    ready = db.batch(SCHEMA.map((sql) => db.prepare(sql))).then(() => addColumns(db)).catch((err) => {
       ready = null;
       throw err;
     });
