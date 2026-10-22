@@ -90,6 +90,10 @@ export default function Home() {
                 <div className="max-w-6xl mx-auto px-4 md:px-6 py-6 flex flex-wrap gap-4 justify-between">
                     <span>© {new Date().getFullYear()} SportsCast</span>
                     <span>{t('home.footer')}</span>
+                    <span className="flex gap-4">
+                        <Link to="/privacy" className="hover:text-gray-300">{t('legal.privacy')}</Link>
+                        <Link to="/terms" className="hover:text-gray-300">{t('legal.terms')}</Link>
+                    </span>
                 </div>
             </footer>
         </Page>

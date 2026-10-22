@@ -9,6 +9,7 @@ import BoardAdmin from './pages/BoardAdmin.jsx';
 import CodeEntry from './pages/CodeEntry.jsx';
 import Display from './pages/Display.jsx';
 import Home from './pages/Home.jsx';
+import { Privacy, Terms } from './pages/Legal.jsx';
 import Login from './pages/Login.jsx';
 import Scoreboards from './pages/Scoreboards.jsx';
 
@@ -21,6 +22,8 @@ const PAGES = {
     '/scoreboards': Scoreboards,
     '/scorer': () => <CodeEntry kind="scorer" />,
     '/board': () => <CodeEntry kind="display" />,
+    '/privacy': Privacy,
+    '/terms': Terms,
 };
 
 function Router() {
