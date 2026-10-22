@@ -1,0 +1,37 @@
+# One Worker serves everything: the website (built into dist/), the /api for accounts,
+# and the websocket rooms for live scores.
+# Cloudflare builds and deploys it from GitHub (Workers Builds):
+#   build command: npm ci && npm run build      deploy command: npx wrangler deploy
+name = "sportscast-server"
+main = "worker/src/index.js"
+compatibility_date = "2025-09-01"
+
+# The Worker runs first for every request, so websocket requests to /<ROOM> reach the
+# rooms instead of being answered with the website.
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+# One Durable Object per room, so every device in a room talks to the same object,
+# wherever in the world Cloudflare runs the request.
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room"]
+
+# Accounts database (D1, named "sportscast"). The Worker creates the tables itself.
+[[d1_databases]]
+binding = "DB"
+database_name = "sportscast"
+database_id = "23c96146-2f7c-4fd3-8656-eaa0b6b9531f"
+
+[vars]
+MAIL_FROM = "SportsCast <login@sportscast.cc>"
+
+# Secret, set in the dashboard (Settings, Variables and Secrets), never in this file:
+#   RESEND_API_KEY
