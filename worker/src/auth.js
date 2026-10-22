@@ -1,4 +1,5 @@
 // /api for accounts: sign up, log in (password or emailed link), log out, account settings.
+// Scoreboard routes live in boards.js and are dispatched from handleApi here.
 //
 // A session is a random token in an HttpOnly cookie (website) or an
 // "Authorization: Bearer" header (the iPhone app, later). Every answer is JSON, and an
@@ -7,6 +8,7 @@
 import { ensureSchema } from "./db.js";
 import { hashPassword, newId, randomToken, sha256, verifyPassword } from "./crypto.js";
 import { sendLinkEmail } from "./email.js";
+import { BOARD_ROUTES, handleBoardRoute } from "./boards.js";
 
 const MINUTE = 60_000;
 const LINK_LIFETIME = 15 * MINUTE;
@@ -21,14 +23,14 @@ const LINKS_PER_IP_PER_HOUR = 20;
 const MAX_FAILED_LOGINS = 10;
 const LOCK_TIME = 15 * MINUTE;
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(status, code) {
     super(code);
     this.status = status;
   }
 }
 
-const json = (data, status = 200, headers = {}) =>
+export const json = (data, status = 200, headers = {}) =>
   new Response(JSON.stringify(data), {
     status,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...headers },
@@ -96,7 +98,7 @@ async function currentUser(request, env) {
   return row || null;
 }
 
-async function requireUser(request, env) {
+export async function requireUser(request, env) {
   const user = await currentUser(request, env);
   if (!user) throw new ApiError(401, "not_logged_in");
   return user;
@@ -244,6 +246,7 @@ async function deleteAccount(request, env, body) {
   await env.DB.batch([
     env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM login_tokens WHERE user_id = ?").bind(user.id),
+    env.DB.prepare("DELETE FROM scoreboards WHERE owner_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM users WHERE id = ?").bind(user.id),
   ]);
   return json({ ok: true }, 200, { "Set-Cookie": sessionCookie("", 0) });
@@ -264,7 +267,8 @@ const ROUTES = {
 export async function handleApi(request, env) {
   const { pathname } = new URL(request.url);
   const handler = ROUTES[`${request.method} ${pathname}`];
-  if (!handler) return json({ error: "not_found" }, 404);
+  const boardRoute = handler ? null : BOARD_ROUTES.find(([method, pattern]) => method === request.method && pattern.test(pathname));
+  if (!handler && !boardRoute) return json({ error: "not_found" }, 404);
   // JSON only: a form on another site can't send this content type without the
   // browser asking first, which stops cross-site requests riding on the cookie.
   if (request.method === "POST" && !(request.headers.get("Content-Type") || "").startsWith("application/json")) {
@@ -273,6 +277,7 @@ export async function handleApi(request, env) {
   try {
     await ensureSchema(env.DB);
     const body = request.method === "POST" ? await request.json().catch(() => ({})) : {};
+    if (boardRoute) return await handleBoardRoute(request, env, body || {}, boardRoute, pathname.match(boardRoute[1])[1]);
     return await handler(request, env, body || {});
   } catch (err) {
     if (err instanceof ApiError) return json({ error: err.message }, err.status);

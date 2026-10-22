@@ -1,9 +1,9 @@
-// The scoreboard controller: the page that was index.html, unchanged apart from
-// imports and the account link in the header. In phase 2 it becomes the scorer page.
+// The scoreboard controller (scorer page). It works with any code: a scoreboard's
+// scorer code changes that scoreboard, any other code is an open room without an account.
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from './auth.jsx';
-import { useI18n } from './i18n.jsx';
+import { api } from './api.js';
 import { Link } from './router.jsx';
+import { AccountNav } from './ui.jsx';
 
 // ------------------------------------------------------------------
 // Shared game state (protocol v2)
@@ -47,7 +47,7 @@ const defaultBaseball = () => ({
     inning: 1, top: true,
 });
 
-const defaultState = () => ({
+export const defaultState = () => ({
     v: PROTOCOL_VERSION,
     rev: 0,
     from: '',
@@ -61,7 +61,7 @@ const defaultState = () => ({
 });
 
 // Missing fields keep the value we already have (never reset to 0).
-function mergeState(current, incoming) {
+export function mergeState(current, incoming) {
     const out = { ...current };
     for (const key of Object.keys(incoming)) {
         const val = incoming[key];
@@ -76,7 +76,7 @@ function mergeState(current, incoming) {
 }
 
 // The current iOS app sends flat baseball fields with no "v".
-function legacyToState(current, msg) {
+export function legacyToState(current, msg) {
     const num = (x, fallback) => (typeof x === 'number' ? x : fallback);
     const bool = (x, fallback) => (typeof x === 'boolean' ? x : fallback);
     const bb = current.baseball;
@@ -101,7 +101,7 @@ function withLegacyFields(state) {
     return { ...state, b1: bb.b1, b2: bb.b2, b3: bb.b3, balls: bb.balls, strikes: bb.strikes, outs: bb.outs, inning: bb.inning, top: bb.top };
 }
 
-function isNewer(incoming, current) {
+export function isNewer(incoming, current) {
     if (incoming.rev !== current.rev) return incoming.rev > current.rev;
     return (incoming.from || '') > (current.from || '');
 }
@@ -157,7 +157,9 @@ const safeStorage = {
 };
 const newRoomCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
 
-function initialRoom() {
+function initialRoom(fixedCode) {
+    // scorer.sportscast.cc/<CODE> gives the code in the path; keep that address as it is.
+    if (fixedCode) return fixedCode.toUpperCase();
     const fromUrl = new URLSearchParams(window.location.search).get('room');
     const code = (fromUrl || safeStorage.get('sportscast.room') || newRoomCode()).toUpperCase();
     setRoomInUrl(code);
@@ -187,9 +189,10 @@ const IconCopy = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height
 const IconExternal = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>;
 const IconSettings = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
 
-export default function WebDashboard() {
-    const [gameCode, setGameCode] = useState(initialRoom);
-    const [workerUrl, setWorkerUrl] = useState(() => safeStorage.get('sportscast.workerUrl') || "wss://sportscast-server.suecio.workers.dev");
+export default function WebDashboard({ fixedCode }) {
+    const [gameCode, setGameCode] = useState(() => initialRoom(fixedCode));
+    // The Worker that serves this page also runs the rooms, so the default is this address.
+    const [workerUrl, setWorkerUrl] = useState(() => safeStorage.get('sportscast.workerUrl') || `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`);
     const [connectionStatus, setConnectionStatus] = useState("Disconnected");
     const [state, setStateRaw] = useState(() => loadSavedState(gameCode));
     const [undoCount, setUndoCount] = useState(0);
@@ -198,6 +201,24 @@ export default function WebDashboard() {
     const undoStack = useRef([]);
     // Highest rev seen from each device, so an old "change" from the same device is ignored.
     const lastRevFrom = useRef({});
+    // When the code is a scoreboard's scorer code: show its title, and start a new
+    // match in the scoreboard's sport (only before the first point, without sending).
+    const [boardTitle, setBoardTitle] = useState('');
+    useEffect(() => {
+        setBoardTitle('');
+        api(`code/${encodeURIComponent(gameCode)}`)
+            .then((info) => {
+                if (info.access !== 'write') return;
+                setBoardTitle(info.title);
+                const current = stateRef.current;
+                if (current.rev === 0 && current.sport !== info.sport) {
+                    const next = { ...current, sport: info.sport };
+                    stateRef.current = next;
+                    setStateRaw(next);
+                }
+            })
+            .catch(() => {});
+    }, [gameCode]);
 
     const setState = useCallback((next) => {
         stateRef.current = next;
@@ -382,6 +403,7 @@ export default function WebDashboard() {
                             <IconCopy />
                         </button>
                     </div>
+                    {boardTitle && <span className="text-white font-semibold">{boardTitle}</span>}
                     <select
                         value={state.sport}
                         onChange={(e) => { const sport = e.target.value; commit(d => { d.sport = sport; }); }}
@@ -391,7 +413,7 @@ export default function WebDashboard() {
                     </select>
                 </div>
                 <div className="flex items-center gap-4">
-                <AccountLink />
+                <AccountNav />
                 <div className="flex items-center space-x-2 font-semibold">
                     <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500 animate-pulse' : (connectionStatus.includes('Preview') || connectionStatus.includes('ing') ? 'bg-yellow-500' : 'bg-red-500')}`}></div>
                     <span className={isConnected ? 'text-green-400' : (connectionStatus.includes('Preview') || connectionStatus.includes('ing') ? 'text-yellow-400' : 'text-red-400')}>{connectionStatus}</span>
@@ -441,6 +463,8 @@ export default function WebDashboard() {
 
                         {state.sport === 'volleyball' && <VolleyballSettings state={state} commit={commit} />}
 
+                        {/* A scoreboard's room and connection are set on its admin page. */}
+                        {!boardTitle && <>
                         <hr className="border-[#323844]"/>
 
                         <div>
@@ -459,6 +483,7 @@ export default function WebDashboard() {
                                 placeholder="wss://sportscast-server.suecio.workers.dev"
                             />
                         </div>
+                        </>}
                     </div>
                 </section>
             </div>
@@ -469,7 +494,7 @@ export default function WebDashboard() {
 // ------------------------------------------------------------------
 // Volleyball
 // ------------------------------------------------------------------
-function VolleyballPreview({ state }) {
+export function VolleyballPreview({ state }) {
     const v = state.volleyball;
     const rows = [
         { team: 'home', name: state.homeName, sets: v.setsHome, points: state.home, color: 'bg-blue-600', past: v.pastSets.map(s => s[0]), other: v.pastSets.map(s => s[1]) },
@@ -575,7 +600,7 @@ function VolleyballSettings({ state, commit }) {
 // ------------------------------------------------------------------
 // Baseball
 // ------------------------------------------------------------------
-function BaseballPreview({ state }) {
+export function BaseballPreview({ state }) {
     const b = state.baseball;
     return (
         <div className="flex items-stretch h-14 shadow-2xl rounded-sm overflow-hidden text-white font-bold text-2xl font-sans shrink-0 border border-[#3f434e]">
@@ -636,7 +661,7 @@ function BaseballControls({ state, commit }) {
 // ------------------------------------------------------------------
 // Basic (points only)
 // ------------------------------------------------------------------
-function BasicPreview({ state }) {
+export function BasicPreview({ state }) {
     return (
         <div className="flex items-stretch h-14 shadow-2xl rounded-sm overflow-hidden text-white font-bold text-2xl font-sans shrink-0 border border-[#3f434e]">
             <div className="bg-[#1a1a1a] opacity-90 px-6 flex items-center">{state.homeName}</div>
@@ -701,13 +726,3 @@ function CountRow({ label, onPlus, onMinus }) {
     );
 }
 
-function AccountLink() {
-    const { t } = useI18n();
-    const { user } = useAuth();
-    if (user === undefined) return null;
-    return (
-        <Link to={user ? '/scoreboards' : '/login'} className="text-sm font-semibold text-gray-300 hover:text-white">
-            {user ? t('nav.scoreboards') : t('nav.login')}
-        </Link>
-    );
-}

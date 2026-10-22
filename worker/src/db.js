@@ -33,6 +33,21 @@ const SCHEMA = [
     created_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id)`,
+  // One scoreboard per match. The scorer code lets anyone who has it change the score;
+  // the display code only shows it, and is turned off while the scoreboard is private.
+  // Both codes share one namespace, so a code is never both at once.
+  `CREATE TABLE IF NOT EXISTS scoreboards (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title TEXT NOT NULL,
+    sport TEXT NOT NULL,
+    scorer_code TEXT NOT NULL UNIQUE,
+    display_code TEXT NOT NULL UNIQUE,
+    private INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS scoreboards_owner ON scoreboards(owner_id, created_at)`,
 ];
 
 let ready = null;

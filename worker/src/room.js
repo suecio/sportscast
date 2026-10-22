@@ -15,9 +15,20 @@ const MAX_STORED = 64 * 1024;
 
 export class Room extends DurableObject {
   async fetch(request) {
+    // Called by the Worker when a scoreboard is deleted.
+    if (request.method === "POST" && new URL(request.url).pathname === "/reset") {
+      for (const socket of this.ctx.getWebSockets()) {
+        try { socket.close(1000, "Scoreboard deleted"); } catch {}
+      }
+      await this.ctx.storage.deleteAll();
+      return new Response("ok");
+    }
+
     const [client, server] = Object.values(new WebSocketPair());
     // Hibernation API: the object can sleep between messages without dropping sockets.
-    this.ctx.acceptWebSocket(server);
+    // The tag remembers whether this device may change the score (set by the Worker).
+    const access = request.headers.get("X-SportsCast-Access") === "read" ? "read" : "write";
+    this.ctx.acceptWebSocket(server, [access]);
 
     // Give a device that joins the latest score right away, even when no other
     // device is connected to answer its "hello".
@@ -28,6 +39,9 @@ export class Room extends DurableObject {
   }
 
   async webSocketMessage(sender, message) {
+    // A read-only device (display link) may only ask for the state with "hello".
+    if (this.ctx.getTags(sender).includes("read") && !isHello(message)) return;
+
     for (const socket of this.ctx.getWebSockets()) {
       if (socket === sender) continue;
       try {
@@ -52,4 +66,9 @@ export class Room extends DurableObject {
   async webSocketClose(socket, code, reason) {
     try { socket.close(code, reason); } catch {}
   }
+}
+
+function isHello(message) {
+  if (typeof message !== "string" || message.length > 1000) return false;
+  try { return JSON.parse(message).type === "hello"; } catch { return false; }
 }
