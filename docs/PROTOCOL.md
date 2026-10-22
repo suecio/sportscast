@@ -54,6 +54,14 @@ Every change sends the full game state:
 - Missing fields keep their current value. They never reset to 0.
 - A new sport adds its own sub-object (like `volleyball`) and does not change the others.
 
+## Changes from the server
+
+When the owner changes a scoreboard's sport or volleyball match format on its page, the
+Worker sends a `"change"` with `"from": "server"` to the room (and stores it as the latest
+state). It holds the stored state with `sport` and the format fields of `volleyball`
+(`bestOf`, `pointsPerSet`, `decidingSetPoints`, `maxTimeouts`) replaced. Devices handle it
+like any other change.
+
 ## Hello message
 
 ```json
