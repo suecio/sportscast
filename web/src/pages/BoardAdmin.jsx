@@ -7,6 +7,7 @@ import { Link, navigate } from '../router.jsx';
 import { copyText, displayLink, embedCode, scorerLink } from '../links.js';
 import { Button, Card, Field, Message, Page } from '../ui.jsx';
 import { SportSelect } from './Scoreboards.jsx';
+import { DisplayThumb, EmbedThumb, ScorerThumb } from './SharePreviews.jsx';
 
 export default function BoardAdmin({ id }) {
     const { t, errorText } = useI18n();
@@ -93,14 +94,17 @@ export default function BoardAdmin({ id }) {
 
             <Card title={t('board.share')}>
                 <ShareRow label={t('board.scorerLink')} help={t('board.scorerLinkHelp')} value={scorerLink(board.scorerCode)}
+                    preview={<ScorerThumb caption={t('board.thumbScorer')} href={scorerLink(board.scorerCode)} />}
                     onNew={() => confirm(t('board.newCodeConfirm')) && update({ scorerCode: 'new' }, t('board.newCodeDone'))} />
                 {board.private ? (
                     <p className="text-sm text-yellow-300">{t('board.privateNoDisplay')}</p>
                 ) : (
                     <>
                         <ShareRow label={t('board.displayLink')} help={t('board.displayLinkHelp')} value={displayLink(board.displayCode)}
+                            preview={<DisplayThumb caption={t('board.thumbDisplay')} href={displayLink(board.displayCode)} sport={board.sport} />}
                             onNew={() => update({ displayCode: 'new' }, t('board.newCodeDone'))} />
-                        <ShareRow label={t('board.embed')} help={t('board.embedHelp')} value={embedCode(board.displayCode)} multiline />
+                        <ShareRow label={t('board.embed')} help={t('board.embedHelp')} value={embedCode(board.displayCode)} multiline
+                            preview={<EmbedThumb caption={t('board.thumbEmbed')} sport={board.sport} />} />
                     </>
                 )}
                 <p className="text-sm text-gray-400">{t('board.appHelp', { code: board.scorerCode })}</p>
@@ -115,7 +119,7 @@ export default function BoardAdmin({ id }) {
     );
 }
 
-function ShareRow({ label, help, value, onNew, multiline = false }) {
+function ShareRow({ label, help, value, onNew, preview, multiline = false }) {
     const { t } = useI18n();
     const [copied, setCopied] = useState(false);
     const copy = async () => {
@@ -123,7 +127,9 @@ function ShareRow({ label, help, value, onNew, multiline = false }) {
     };
     const box = 'w-full bg-[#15171d] border border-[#323844] rounded p-2.5 text-white font-mono text-sm';
     return (
-        <div className="space-y-1.5">
+        <div className="grid gap-4 sm:grid-cols-[11rem_1fr] items-start">
+        {preview}
+        <div className="space-y-1.5 min-w-0">
             <div className="text-sm font-semibold text-gray-400">{label}</div>
             {multiline
                 ? <textarea readOnly rows={3} value={value} className={box} onFocus={(e) => e.target.select()} />
@@ -133,6 +139,7 @@ function ShareRow({ label, help, value, onNew, multiline = false }) {
                 {onNew && <button type="button" onClick={onNew} className="px-3 py-1.5 rounded text-sm font-bold border border-[#4a4f5c] text-gray-200 hover:bg-[#3f434e]">{t('board.newCode')}</button>}
             </div>
             <p className="text-xs text-gray-500">{help}</p>
+        </div>
         </div>
     );
 }
