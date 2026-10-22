@@ -31,7 +31,9 @@ Every change sends the full game state:
     "timeoutsHome": 1,
     "timeoutsAway": 0,
     "maxTimeouts": 2,
-    "finished": false
+    "finished": false,
+    "timeoutTeam": "",
+    "timeoutUntil": 0
   },
   "baseball": { "b1": false, "b2": true, "b3": false, "balls": 1, "strikes": 2, "outs": 1, "inning": 4, "top": true }
 }
@@ -66,6 +68,12 @@ so a device that joins or reconnects gets the score right away.
 - +1 point: that team now serves (rally scoring). No points can be added once a set is won.
 - A set is won at `pointsPerSet` (or `decidingSetPoints` in the last possible set) with a 2 point lead.
   The scorer confirms with "End set": the score goes to `pastSets`, sets won go up, points and timeouts reset.
+- The graphic shows one small bar per timeout next to each team name (white = still available).
+- Taking a timeout sets `timeoutTeam` to that team and `timeoutUntil` to 30 seconds from now
+  (milliseconds since 1970). While that time has not passed, the graphic shows a "TIMEOUT <team>"
+  banner under the rows. The next point, "End set" or removing that timeout clears it
+  (`timeoutTeam` = `""`, `timeoutUntil` = 0). A `timeoutUntil` more than 35 seconds in the future
+  is ignored (a device with a wrong clock).
 - The match is finished when a team has won `ceil(bestOf / 2)` sets.
 
 ## Old format (temporary)

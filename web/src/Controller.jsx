@@ -39,6 +39,8 @@ const defaultVolleyball = () => ({
     timeoutsAway: 0,
     maxTimeouts: 2,
     finished: false,
+    timeoutTeam: '',        // the team in the "TIMEOUT" banner, or '' for none
+    timeoutUntil: 0,        // when that banner ends, in milliseconds since 1970
 });
 
 const defaultBaseball = () => ({
@@ -109,6 +111,8 @@ export function isNewer(incoming, current) {
 // ------------------------------------------------------------------
 // Volleyball rules (indoor rally scoring)
 // ------------------------------------------------------------------
+const TIMEOUT_BANNER_SECONDS = 30;
+
 const vb = {
     setNumber: (s) => s.volleyball.setsHome + s.volleyball.setsAway + 1,
     setsToWin: (s) => Math.ceil(s.volleyball.bestOf / 2),
@@ -124,6 +128,7 @@ const vb = {
         if (d.volleyball.finished || vb.setWinner(d)) return;
         d[team] += 1;
         d.volleyball.serving = team; // rally winner serves
+        vb.clearTimeoutBanner(d);    // play has started again
     },
     removePoint: (d, team) => { d[team] = Math.max(0, d[team] - 1); },
     endSet: (d) => {
@@ -134,11 +139,29 @@ const vb = {
         if (winner === 'home') v.setsHome += 1; else v.setsAway += 1;
         d.home = 0; d.away = 0;
         v.timeoutsHome = 0; v.timeoutsAway = 0;
+        vb.clearTimeoutBanner(d);
         if (v.setsHome >= vb.setsToWin(d) || v.setsAway >= vb.setsToWin(d)) v.finished = true;
     },
     timeout: (d, team, delta) => {
         const key = team === 'home' ? 'timeoutsHome' : 'timeoutsAway';
-        d.volleyball[key] = Math.min(d.volleyball.maxTimeouts, Math.max(0, d.volleyball[key] + delta));
+        const before = d.volleyball[key];
+        d.volleyball[key] = Math.min(d.volleyball.maxTimeouts, Math.max(0, before + delta));
+        if (d.volleyball[key] > before) {
+            // Show "TIMEOUT" on the graphic for this team.
+            d.volleyball.timeoutTeam = team;
+            d.volleyball.timeoutUntil = Date.now() + TIMEOUT_BANNER_SECONDS * 1000;
+        } else if (d.volleyball[key] < before && d.volleyball.timeoutTeam === team) {
+            vb.clearTimeoutBanner(d);
+        }
+    },
+    clearTimeoutBanner: (d) => { d.volleyball.timeoutTeam = ''; d.volleyball.timeoutUntil = 0; },
+    // Milliseconds left of the banner, or 0. A banner that ends much later than 30 seconds
+    // from now comes from a device with a wrong clock and is ignored.
+    timeoutBannerLeft: (s, now = Date.now()) => {
+        const v = s.volleyball;
+        if (s.sport !== 'volleyball' || (v.timeoutTeam !== 'home' && v.timeoutTeam !== 'away')) return 0;
+        const left = (v.timeoutUntil || 0) - now;
+        return left > 0 && left <= (TIMEOUT_BANNER_SECONDS + 5) * 1000 ? left : 0;
     },
     resetMatch: (d) => {
         const keep = d.volleyball;
@@ -494,11 +517,24 @@ export default function WebDashboard({ fixedCode }) {
 // ------------------------------------------------------------------
 // Volleyball
 // ------------------------------------------------------------------
+// The "TIMEOUT" banner ends by itself, without a new message, so redraw when it ends.
+function useTimeoutBanner(state) {
+    const left = vb.timeoutBannerLeft(state);
+    const [, redraw] = useState(0);
+    useEffect(() => {
+        if (!left) return;
+        const timer = setTimeout(() => redraw((n) => n + 1), left + 50);
+        return () => clearTimeout(timer);
+    }, [left > 0, state.volleyball.timeoutUntil]);
+    return left > 0 ? state.volleyball.timeoutTeam : null;
+}
+
 export function VolleyballPreview({ state }) {
     const v = state.volleyball;
+    const banner = useTimeoutBanner(state);
     const rows = [
-        { team: 'home', name: state.homeName, sets: v.setsHome, points: state.home, color: 'bg-blue-600', past: v.pastSets.map(s => s[0]), other: v.pastSets.map(s => s[1]) },
-        { team: 'away', name: state.awayName, sets: v.setsAway, points: state.away, color: 'bg-red-600', past: v.pastSets.map(s => s[1]), other: v.pastSets.map(s => s[0]) },
+        { team: 'home', name: state.homeName, sets: v.setsHome, points: state.home, timeouts: v.timeoutsHome, color: 'bg-blue-600', past: v.pastSets.map(s => s[0]), other: v.pastSets.map(s => s[1]) },
+        { team: 'away', name: state.awayName, sets: v.setsAway, points: state.away, timeouts: v.timeoutsAway, color: 'bg-red-600', past: v.pastSets.map(s => s[1]), other: v.pastSets.map(s => s[0]) },
     ];
     return (
         <div className="shadow-2xl rounded-sm overflow-hidden text-white font-bold font-sans shrink-0 border border-[#3f434e]">
@@ -508,6 +544,12 @@ export function VolleyballPreview({ state }) {
                         {v.serving === r.team && <span className="w-3 h-3 rounded-full bg-yellow-400"></span>}
                     </div>
                     <div className="bg-[#1a1a1a] opacity-90 pl-2 pr-6 flex items-center text-xl min-w-[9rem]">{r.name}</div>
+                    {/* One bar per timeout in the set: white = still available, dark = used. */}
+                    <div className="bg-[#1a1a1a] w-6 flex flex-col items-center justify-center gap-1">
+                        {Array.from({ length: Math.max(0, v.maxTimeouts) }, (_, i) => (
+                            <span key={i} className={`block w-3 h-1 rounded-[1px] ${i < v.maxTimeouts - r.timeouts ? 'bg-white' : 'bg-[#555]'}`}></span>
+                        ))}
+                    </div>
                     {r.past.map((p, i) => (
                         <div key={i} className={`bg-[#222] w-11 flex items-center justify-center text-lg ${p > r.other[i] ? 'text-white' : 'text-gray-500'}`}>{p}</div>
                     ))}
@@ -515,6 +557,11 @@ export function VolleyballPreview({ state }) {
                     <div className={`${r.color} w-16 flex items-center justify-center text-3xl font-black`}>{r.points}</div>
                 </div>
             ))}
+            {banner && (
+                <div className="bg-yellow-400 text-black h-8 px-3 flex items-center text-lg font-black whitespace-nowrap">
+                    TIMEOUT&nbsp;&nbsp;{banner === 'home' ? state.homeName : state.awayName}
+                </div>
+            )}
         </div>
     );
 }
