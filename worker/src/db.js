@@ -48,6 +48,29 @@ const SCHEMA = [
     updated_at INTEGER NOT NULL
   )`,
   `CREATE INDEX IF NOT EXISTS scoreboards_owner ON scoreboards(owner_id, created_at)`,
+  // A user's connected YouTube channel. Tokens are encrypted (crypto.js encryptText).
+  `CREATE TABLE IF NOT EXISTS youtube_accounts (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    channel_id TEXT NOT NULL,
+    channel_title TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    access_token TEXT,
+    access_expires_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  )`,
+  // The YouTube live stream made for a scoreboard. The stream key is encrypted.
+  `CREATE TABLE IF NOT EXISTS board_streams (
+    board_id TEXT PRIMARY KEY REFERENCES scoreboards(id) ON DELETE CASCADE,
+    broadcast_id TEXT NOT NULL,
+    stream_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    scheduled_at INTEGER NOT NULL,
+    privacy TEXT NOT NULL,
+    ingest_url TEXT NOT NULL,
+    stream_key TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
 ];
 
 // Columns added after a table was first created. SQLite has no "ADD COLUMN IF NOT EXISTS".

@@ -7,6 +7,7 @@ import { Link, navigate } from '../router.jsx';
 import { copyText, displayLink, embedCode, scorerLink } from '../links.js';
 import { Button, Card, Field, Message, Page } from '../ui.jsx';
 import MatchFormat from './MatchFormat.jsx';
+import YouTubeCard from './YouTubeCard.jsx';
 import { SportSelect } from './Scoreboards.jsx';
 import { DisplayThumb, EmbedThumb, ScorerThumb } from './SharePreviews.jsx';
 
@@ -86,6 +87,8 @@ export default function BoardAdmin({ id }) {
                 <MatchFormat key={JSON.stringify(board.format)} format={board.format} busy={busy}
                     onSave={(format) => update({ format }, t('format.saved'))} />
             )}
+
+            <YouTubeCard board={board} />
 
             <Card title={t('board.privacy')}>
                 <label className="flex items-start gap-3 cursor-pointer">

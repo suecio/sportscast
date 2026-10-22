@@ -28,6 +28,13 @@ build command `npm ci && npm run build`, deploy command `npx wrangler deploy`.
 The Worker needs the secret `RESEND_API_KEY` (Settings, Variables and Secrets). The D1
 tables are created by the Worker on first use.
 
+"Connect YouTube" needs three more secrets: `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+(an OAuth client of type "Web application" in Google Cloud, with the YouTube Data API v3
+turned on and the redirect URI `https://sportscast.cc/api/youtube/callback`), and
+`TOKEN_KEY`, a long random string used to encrypt YouTube tokens and stream keys in the
+database. Changing `TOKEN_KEY` later makes the stored ones unreadable (users connect again).
+Without these, the scoreboard page says YouTube isn't set up.
+
 ## Run on your own computer
 
     npm install

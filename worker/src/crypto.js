@@ -48,3 +48,25 @@ export async function verifyPassword(password, stored) {
   for (let i = 0; i < actual.length; i++) diff |= actual[i] ^ expected[i];
   return diff === 0;
 }
+
+// Secrets we must use again later (YouTube sign-in tokens, stream keys) are stored
+// encrypted with AES-GCM. The key comes from the TOKEN_KEY secret, so a copy of the
+// database alone does not give access to anyone's YouTube channel.
+async function tokenKey(env) {
+  if (!env.TOKEN_KEY) throw new Error("TOKEN_KEY secret is missing");
+  const raw = await crypto.subtle.digest("SHA-256", encoder.encode(env.TOKEN_KEY));
+  return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
+}
+
+export async function encryptText(env, text) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, await tokenKey(env), encoder.encode(text));
+  return `v1.${toBase64Url(iv)}.${toBase64Url(data)}`;
+}
+
+export async function decryptText(env, stored) {
+  const [version, iv, data] = String(stored || "").split(".");
+  if (version !== "v1") throw new Error("Unknown encrypted value");
+  const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: fromBase64Url(iv) }, await tokenKey(env), fromBase64Url(data));
+  return new TextDecoder().decode(plain);
+}

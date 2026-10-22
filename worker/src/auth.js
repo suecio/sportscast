@@ -9,6 +9,7 @@ import { ensureSchema } from "./db.js";
 import { hashPassword, newId, randomToken, sha256, verifyPassword } from "./crypto.js";
 import { sendLinkEmail } from "./email.js";
 import { BOARD_ROUTES, handleBoardRoute } from "./boards.js";
+import { YOUTUBE_ROUTES, disconnectUser } from "./youtube.js";
 
 const MINUTE = 60_000;
 const LINK_LIFETIME = 15 * MINUTE;
@@ -243,7 +244,9 @@ async function logoutOthers(request, env) {
 async function deleteAccount(request, env, body) {
   const user = await requireUser(request, env);
   if (!(await verifyPassword(String(body.password || ""), user.password_hash))) throw new ApiError(400, "wrong_password");
+  await disconnectUser(env, user.id);
   await env.DB.batch([
+    env.DB.prepare("DELETE FROM board_streams WHERE board_id IN (SELECT id FROM scoreboards WHERE owner_id = ?)").bind(user.id),
     env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM login_tokens WHERE user_id = ?").bind(user.id),
     env.DB.prepare("DELETE FROM scoreboards WHERE owner_id = ?").bind(user.id),
@@ -267,7 +270,7 @@ const ROUTES = {
 export async function handleApi(request, env) {
   const { pathname } = new URL(request.url);
   const handler = ROUTES[`${request.method} ${pathname}`];
-  const boardRoute = handler ? null : BOARD_ROUTES.find(([method, pattern]) => method === request.method && pattern.test(pathname));
+  const boardRoute = handler ? null : [...BOARD_ROUTES, ...YOUTUBE_ROUTES].find(([method, pattern]) => method === request.method && pattern.test(pathname));
   if (!handler && !boardRoute) return json({ error: "not_found" }, 404);
   // JSON only: a form on another site can't send this content type without the
   // browser asking first, which stops cross-site requests riding on the cookie.

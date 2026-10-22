@@ -6,6 +6,7 @@
 
 import { ApiError, json, requireUser } from "./auth.js";
 import { newId } from "./crypto.js";
+import { deleteBoardStream } from "./youtube.js";
 
 const SPORTS = ["volleyball", "baseball", "basic"];
 // Letters and digits that are hard to mix up when read aloud or typed (no 0/O, 1/I/L).
@@ -194,6 +195,7 @@ async function updateBoard(request, env, user, body, id) {
 
 async function deleteBoard(request, env, user, body, id) {
   const row = await ownBoard(env, user, id);
+  await deleteBoardStream(env, user.id, row.id);
   await env.DB.prepare("DELETE FROM scoreboards WHERE id = ?").bind(row.id).run();
   // Clear the live score, so the room is empty if the id were ever reused.
   await env.ROOMS.get(env.ROOMS.idFromName(roomName(row.id))).fetch("https://room/reset", { method: "POST" });
